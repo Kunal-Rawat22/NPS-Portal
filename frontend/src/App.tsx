@@ -18,6 +18,7 @@ import UserManagement from './pages/UserManagement/UserManagement';
 import SurveyList from './pages/UserManagement/SurveyList';
 import BusinessUnitManagement from './pages/BusinessUnits/BusinessUnitManagement';
 import Settings from './pages/Settings/Settings';
+import Profile from './pages/Profile/Profile';
 import ToastContainer from './components/Toast/ToastContainer';
 import SessionExpiredModal from './components/SessionExpiredModal';
 import { useSelector } from 'react-redux';
@@ -29,7 +30,9 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-c
 
 const DashboardRouter: React.FC = () => {
   const { user } = useSelector((s: RootState) => s.auth);
+  const { viewMode } = useSelector((s: RootState) => s.ui);
   if (!user) return <Navigate to="/login" />;
+  if (user.role === 'EMPLOYEE' || viewMode === 'participation') return <EmployeeDashboard />;
   if (user.role === 'ADMIN') return <AdminDashboard />;
   if (user.role === 'BU_HEAD') return <BUDashboard />;
   if (user.role === 'HRBP') return <HRBPDashboard />;
@@ -51,6 +54,7 @@ function App() {
                   <Route path="/dashboard" element={<DashboardRouter />} />
                   <Route path="/surveys" element={<SurveyList />} />
                   <Route path="/surveys/:id/take" element={<TakeSurvey />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                     <Route path="/surveys/new" element={<SurveyBuilder />} />
                     <Route path="/surveys/:id/edit" element={<SurveyBuilder />} />

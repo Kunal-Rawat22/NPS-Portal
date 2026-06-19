@@ -1,31 +1,9 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getSurveys } from '../../api/surveys';
-import { getMySurveyResponseStatuses } from '../../api/responses';
+import React from 'react';
 import EmployeeSurveySections from '../../components/Survey/EmployeeSurveySections';
-import { categorizeEmployeeSurveys } from '../../components/Survey/employeeSurveyUtils';
+import { useParticipationSurveys } from '../../hooks/useParticipationSurveys';
 
 const EmployeeDashboard: React.FC = () => {
-  const { data: surveys = [], isLoading: surveysLoading } = useQuery({
-    queryKey: ['surveys'],
-    queryFn: getSurveys,
-  });
-  const { data: myResponses = [], isLoading: responsesLoading } = useQuery({
-    queryKey: ['my-survey-responses'],
-    queryFn: getMySurveyResponseStatuses,
-  });
-
-  const responseBySurvey = useMemo(
-    () => new Map(myResponses.map(r => [r.surveyId, r])),
-    [myResponses]
-  );
-
-  const categories = useMemo(
-    () => categorizeEmployeeSurveys(surveys, responseBySurvey),
-    [surveys, responseBySurvey]
-  );
-
-  const isLoading = surveysLoading || responsesLoading;
+  const { responseBySurvey, categories, isLoading } = useParticipationSurveys();
 
   if (isLoading) {
     return (

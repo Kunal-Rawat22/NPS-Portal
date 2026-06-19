@@ -4,6 +4,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useDispatch, useSelector } from 'react-redux';
 import { googleLogin, emailLogin } from '../../api/auth';
 import { setCredentials } from '../../store/authSlice';
+import { setViewMode } from '../../store/uiSlice';
 import { RootState } from '../../store';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 
@@ -33,6 +34,9 @@ const Login: React.FC = () => {
     try {
       const data = await emailLogin(email, password);
       dispatch(setCredentials({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user }));
+      if (data.user.role === 'EMPLOYEE') {
+        dispatch(setViewMode('participation'));
+      }
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid email or password. Please try again.');
@@ -47,6 +51,9 @@ const Login: React.FC = () => {
     try {
       const data = await googleLogin(credentialResponse.credential);
       dispatch(setCredentials({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user }));
+      if (data.user.role === 'EMPLOYEE') {
+        dispatch(setViewMode('participation'));
+      }
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Google login failed. Ensure your account is provisioned.');

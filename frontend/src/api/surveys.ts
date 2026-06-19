@@ -17,6 +17,8 @@ export interface SurveyPayload {
 }
 
 export const getSurveys = async (): Promise<Survey[]> => (await api.get('/surveys')).data;
+export const getParticipationSurveys = async (): Promise<Survey[]> =>
+  (await api.get('/surveys', { params: { mode: 'participation' } })).data;
 export const getSurvey = async (id: string): Promise<Survey> => (await api.get(`/surveys/${id}`)).data;
 export const createSurvey = async (data: SurveyPayload): Promise<Survey> => (await api.post('/surveys', data)).data;
 export const updateSurvey = async (id: string, data: SurveyPayload): Promise<Survey> => (await api.put(`/surveys/${id}`, data)).data;

@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
-import { LayoutDashboard, ClipboardList, Users, BarChart3, Settings, Building2 } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, BarChart3, Settings, Building2, UserCircle } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
   const { user } = useSelector((s: RootState) => s.auth);
@@ -10,6 +10,7 @@ const Sidebar: React.FC = () => {
   const navItems = [
     { label: 'Dashboard', icon: <LayoutDashboard size={18} />, to: '/dashboard', roles: ['ADMIN', 'BU_HEAD', 'HRBP', 'EMPLOYEE'] },
     { label: 'Surveys', icon: <ClipboardList size={18} />, to: '/surveys', roles: ['ADMIN', 'BU_HEAD', 'HRBP', 'EMPLOYEE'] },
+    { label: 'Profile', icon: <UserCircle size={18} />, to: '/profile', roles: ['ADMIN', 'BU_HEAD', 'HRBP', 'EMPLOYEE'] },
     { label: 'Analytics', icon: <BarChart3 size={18} />, to: '/analytics', roles: ['ADMIN', 'BU_HEAD', 'HRBP'] },
     { label: 'Users', icon: <Users size={18} />, to: '/users', roles: ['ADMIN'] },
     { label: 'Business Units', icon: <Building2 size={18} />, to: '/business-units', roles: ['ADMIN'] },

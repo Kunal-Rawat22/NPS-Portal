@@ -1,50 +1,39 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getSurveys, deleteSurvey, closeSurvey, reopenSurvey } from '../../api/surveys';
-import { getMySurveyResponseStatuses } from '../../api/responses';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { Survey } from '../../types';
 import SurveyQuestionsModal from '../../components/Survey/SurveyQuestionsModal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmployeeSurveySections from '../../components/Survey/EmployeeSurveySections';
-import { categorizeEmployeeSurveys } from '../../components/Survey/employeeSurveyUtils';
+import { useParticipationSurveys } from '../../hooks/useParticipationSurveys';
 import { Plus, Edit, Trash2, XCircle, Eye, ListOrdered, RotateCcw } from 'lucide-react';
 
 const SurveyList: React.FC = () => {
   const { user } = useSelector((s: RootState) => s.auth);
+  const { viewMode } = useSelector((s: RootState) => s.ui);
   const qc = useQueryClient();
   const isAdmin = user?.role === 'ADMIN';
   const isEmployee = user?.role === 'EMPLOYEE';
+  const showParticipationView = isEmployee || viewMode === 'participation';
   const [viewQuestionsSurvey, setViewQuestionsSurvey] = useState<Survey | null>(null);
   const [reopenTarget, setReopenTarget] = useState<Survey | null>(null);
+
+  const participation = useParticipationSurveys();
 
   const { data: surveys = [], isLoading: surveysLoading } = useQuery({
     queryKey: ['surveys'],
     queryFn: getSurveys,
+    enabled: !showParticipationView,
   });
-  const { data: myResponses = [], isLoading: responsesLoading } = useQuery({
-    queryKey: ['my-survey-responses'],
-    queryFn: getMySurveyResponseStatuses,
-    enabled: isEmployee,
-  });
-
-  const responseBySurvey = useMemo(
-    () => new Map(myResponses.map(r => [r.surveyId, r])),
-    [myResponses]
-  );
-
-  const employeeCategories = useMemo(
-    () => (isEmployee ? categorizeEmployeeSurveys(surveys, responseBySurvey) : null),
-    [isEmployee, surveys, responseBySurvey]
-  );
 
   const deleteMutation = useMutation({ mutationFn: deleteSurvey, onSuccess: () => qc.invalidateQueries({ queryKey: ['surveys'] }) });
   const closeMutation = useMutation({ mutationFn: closeSurvey, onSuccess: () => qc.invalidateQueries({ queryKey: ['surveys'] }) });
   const reopenMutation = useMutation({ mutationFn: reopenSurvey, onSuccess: () => qc.invalidateQueries({ queryKey: ['surveys'] }) });
 
-  const isLoading = surveysLoading || (isEmployee && responsesLoading);
+  const isLoading = showParticipationView ? participation.isLoading : surveysLoading;
 
   if (isLoading) {
     return (
@@ -54,7 +43,7 @@ const SurveyList: React.FC = () => {
     );
   }
 
-  if (isEmployee && employeeCategories) {
+  if (showParticipationView) {
     return (
       <div className="space-y-6">
         <div>
@@ -62,8 +51,8 @@ const SurveyList: React.FC = () => {
           <p className="text-gray-500 mt-1">All active and past surveys with your participation status</p>
         </div>
         <EmployeeSurveySections
-          categories={employeeCategories}
-          responseBySurvey={responseBySurvey}
+          categories={participation.categories}
+          responseBySurvey={participation.responseBySurvey}
           layout="list"
         />
       </div>

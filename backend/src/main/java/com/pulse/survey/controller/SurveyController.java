@@ -25,8 +25,12 @@ public class SurveyController {
     private final SurveyService surveyService;
 
     @GetMapping
-    public ResponseEntity<List<SurveyDto>> getAll(@AuthenticationPrincipal UserPrincipal principal) {
-        if (principal.getRole().name().equals("EMPLOYEE")) {
+    public ResponseEntity<List<SurveyDto>> getAll(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) String mode) {
+        boolean participationView = "participation".equalsIgnoreCase(mode)
+                || principal.getRole().name().equals("EMPLOYEE");
+        if (participationView) {
             return ResponseEntity.ok(surveyService.getForEmployee());
         }
         return ResponseEntity.ok(surveyService.getAll());
