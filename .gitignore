@@ -1,0 +1,84 @@
+#######################################
+# General
+#######################################
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+.env
+.env.example
+#######################################
+# Frontend (React)
+#######################################
+
+# Dependencies
+frontend/node_modules/
+
+# Build output
+frontend/build/
+frontend/dist/
+
+# Environment files
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Cache
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/.eslintcache
+
+# Coverage
+frontend/coverage/
+
+#######################################
+# Backend (Spring Boot)
+#######################################
+
+# Maven
+backend/target/
+
+# Gradle
+backend/.gradle/
+backend/build/
+
+# Logs
+backend/logs/
+backend/*.log
+
+# Local configuration
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-dev.properties
+
+#######################################
+# Java
+#######################################
+*.class
+*.jar
+*.war
+*.ear
+
+#######################################
+# IDEs
+#######################################
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+#######################################
+# Misc
+#######################################
+coverage/
