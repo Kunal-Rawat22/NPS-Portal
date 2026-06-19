@@ -66,9 +66,30 @@ public class AnalyticsService {
     @Cacheable(value = "analytics", key = "'competency:' + #surveyId + ':' + #competency")
     public AnalyticsOverviewDto getCompetencyAnalytics(UUID surveyId, String competency) {
         Survey survey = loadSurveyForAnalytics(surveyId);
-        List<User> users = userRepository.findByCompetency(competency);
-        UserScope scope = new UserScope(users.stream().map(User::getId).toList(), users.size());
+        UserScope scope = resolveCompetencyScope(competency);
         return buildOverview(survey, loadScopedQuestionResponses(surveyId, scope), scope);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getCompetencies() {
+        return userRepository.findDistinctCompetencies();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnrichedSurveyResponseDto> getCompetencyResponses(UUID surveyId, String competency,
+                                                                   UUID categoryId, UUID questionId) {
+        loadSurveyForAnalytics(surveyId);
+        UserScope scope = resolveCompetencyScope(competency);
+        return buildEnrichedResponses(loadScopedSurveyResponses(surveyId, scope), categoryId, questionId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AnalyticsAnswerDetailDto> getCompetencyAnswerDetails(UUID surveyId, String competency,
+                                                                      UUID categoryId, UUID questionId) {
+        loadSurveyForAnalytics(surveyId);
+        validateDetailFilter(categoryId, questionId);
+        UserScope scope = resolveCompetencyScope(competency);
+        return buildAnswerDetails(loadScopedQuestionResponses(surveyId, scope), categoryId, questionId);
     }
 
     @Transactional(readOnly = true)
@@ -157,6 +178,11 @@ public class AnalyticsService {
         }
         List<User> buUsers = userRepository.findByBusinessUnitId(buId);
         return new UserScope(buUsers.stream().map(User::getId).toList(), buUsers.size());
+    }
+
+    private UserScope resolveCompetencyScope(String competency) {
+        List<User> users = userRepository.findByCompetency(competency);
+        return new UserScope(users.stream().map(User::getId).toList(), users.size());
     }
 
     private UserScope resolveHrbpDirectScope(UUID hrbpId) {

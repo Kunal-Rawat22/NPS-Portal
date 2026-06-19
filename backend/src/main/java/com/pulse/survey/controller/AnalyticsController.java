@@ -35,6 +35,12 @@ public class AnalyticsController {
         return ResponseEntity.ok(analyticsService.getBUAnalytics(id, buId, principal));
     }
 
+    @GetMapping("/competencies")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<String>> getCompetencies() {
+        return ResponseEntity.ok(analyticsService.getCompetencies());
+    }
+
     @GetMapping("/surveys/{id}/competency/{competency}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AnalyticsOverviewDto> competencyAnalytics(@PathVariable UUID id,
@@ -117,6 +123,24 @@ public class AnalyticsController {
                                                                                       @RequestParam(required = false) UUID questionId,
                                                                                       @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(analyticsService.getHrbpDirectAnswerDetails(id, principal.getId(), categoryId, questionId));
+    }
+
+    @GetMapping("/surveys/{id}/competency/{competency}/responses")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EnrichedSurveyResponseDto>> competencyResponses(@PathVariable UUID id,
+                                                                                 @PathVariable String competency,
+                                                                                 @RequestParam(required = false) UUID categoryId,
+                                                                                 @RequestParam(required = false) UUID questionId) {
+        return ResponseEntity.ok(analyticsService.getCompetencyResponses(id, competency, categoryId, questionId));
+    }
+
+    @GetMapping("/surveys/{id}/competency/{competency}/answers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AnalyticsAnswerDetailDto>> competencyAnswerDetails(@PathVariable UUID id,
+                                                                                    @PathVariable String competency,
+                                                                                    @RequestParam(required = false) UUID categoryId,
+                                                                                    @RequestParam(required = false) UUID questionId) {
+        return ResponseEntity.ok(analyticsService.getCompetencyAnswerDetails(id, competency, categoryId, questionId));
     }
 
     @GetMapping("/surveys/{id}/hrbp/hierarchy/answers")

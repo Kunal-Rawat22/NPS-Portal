@@ -124,6 +124,7 @@ export interface AnalyticsAnswerDetail {
 export type AnalyticsScope =
   | { type: 'org' }
   | { type: 'bu'; buId: string }
+  | { type: 'competency'; competency: string }
   | { type: 'hrbp-direct' }
   | { type: 'hrbp-hierarchy' };
 

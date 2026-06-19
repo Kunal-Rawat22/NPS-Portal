@@ -12,6 +12,8 @@ import {
   fetchAnalyticsOverview,
   getAnalyticsAnswerDetails,
   getAnalyticsResponses,
+  getCompetencies,
+  getScopeLabel,
   resolveAnalyticsScope,
 } from '../../api/analytics';
 import { RootState } from '../../store';
@@ -37,6 +39,7 @@ const Analytics: React.FC = () => {
   const [selectedBU, setSelectedBU] = useState(
     searchParams.get('buId') || (user?.role === 'BU_HEAD' ? user.businessUnitId || '' : '')
   );
+  const [selectedCompetency, setSelectedCompetency] = useState('');
   const [hrbpMode, setHrbpMode] = useState<'direct' | 'hierarchy'>('direct');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [modalView, setModalView] = useState<ModalView | null>(null);
@@ -50,21 +53,29 @@ const Analytics: React.FC = () => {
     queryFn: getBusinessUnits,
     enabled: user?.role === 'ADMIN' || user?.role === 'BU_HEAD',
   });
+  const { data: competencies = [] } = useQuery({
+    queryKey: ['competencies'],
+    queryFn: getCompetencies,
+    enabled: user?.role === 'ADMIN',
+  });
 
   const analyticsSurveys = surveys.filter(s => s.status === 'ACTIVE' || s.status === 'CLOSED');
 
   const scope = useMemo(
-    () => resolveAnalyticsScope(user?.role, selectedBU, hrbpMode, user?.businessUnitId),
-    [user?.role, selectedBU, hrbpMode, user?.businessUnitId]
+    () => resolveAnalyticsScope(user?.role, selectedBU, selectedCompetency, hrbpMode, user?.businessUnitId),
+    [user?.role, selectedBU, selectedCompetency, hrbpMode, user?.businessUnitId]
   );
 
+  const scopeLabel = getScopeLabel(scope);
+
   const { data: analytics, isLoading } = useQuery({
-    queryKey: ['analytics', user?.role, selectedSurvey, selectedBU, hrbpMode],
+    queryKey: ['analytics', user?.role, selectedSurvey, selectedBU, selectedCompetency, hrbpMode],
     queryFn: () =>
       fetchAnalyticsOverview(
         selectedSurvey,
         user?.role,
         selectedBU,
+        selectedCompetency,
         hrbpMode,
         user?.businessUnitId
       ),
@@ -125,7 +136,12 @@ const Analytics: React.FC = () => {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-500 mt-1">Survey performance insights</p>
+          <p className="text-gray-500 mt-1">
+            Survey performance insights
+            {scopeLabel && selectedSurvey && (
+              <span className="ml-2 text-primary-600">· {scopeLabel}</span>
+            )}
+          </p>
         </div>
         {analytics && scope && (
           <button
@@ -145,7 +161,7 @@ const Analytics: React.FC = () => {
       </div>
 
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="label">Survey</label>
             <select className="input" value={selectedSurvey} onChange={e => setSelectedSurvey(e.target.value)}>
@@ -156,13 +172,40 @@ const Analytics: React.FC = () => {
             </select>
           </div>
           {user?.role === 'ADMIN' && (
-            <div>
-              <label className="label">Business Unit</label>
-              <select className="input" value={selectedBU} onChange={e => setSelectedBU(e.target.value)}>
-                <option value="">All Organisation</option>
-                {bus.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </div>
+            <>
+              <div>
+                <label className="label">Business Unit</label>
+                <select
+                  className="input"
+                  value={selectedBU}
+                  disabled={!!selectedCompetency}
+                  onChange={e => {
+                    setSelectedBU(e.target.value);
+                    if (e.target.value) setSelectedCompetency('');
+                  }}
+                >
+                  <option value="">All Organisation</option>
+                  {bus.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label">Competency</label>
+                <select
+                  className="input"
+                  value={selectedCompetency}
+                  disabled={!!selectedBU}
+                  onChange={e => {
+                    setSelectedCompetency(e.target.value);
+                    if (e.target.value) setSelectedBU('');
+                  }}
+                >
+                  <option value="">All Competencies</option>
+                  {competencies.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
           {user?.role === 'BU_HEAD' && user.businessUnitName && (
             <div>
