@@ -1,6 +1,7 @@
 package com.pulse.survey.service;
 
 import com.pulse.survey.dto.request.SaveResponseRequest;
+import com.pulse.survey.dto.response.MySurveyResponseStatusDto;
 import com.pulse.survey.dto.response.SurveyResponseDto;
 import com.pulse.survey.entity.*;
 import com.pulse.survey.enums.ResponseStatus;
@@ -32,6 +33,18 @@ public class ResponseService {
         return surveyResponseRepo.findBySurveyIdAndUserId(surveyId, userId)
                 .map(this::toDto)
                 .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MySurveyResponseStatusDto> getMyResponseStatuses(UUID userId) {
+        return surveyResponseRepo.findByUserIdWithSurvey(userId).stream()
+                .map(sr -> new MySurveyResponseStatusDto(
+                        sr.getSurvey().getId(),
+                        sr.getId(),
+                        sr.getStatus(),
+                        sr.getSubmittedAt()
+                ))
+                .toList();
     }
 
     @Transactional

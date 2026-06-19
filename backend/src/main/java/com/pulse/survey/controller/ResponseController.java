@@ -1,6 +1,7 @@
 package com.pulse.survey.controller;
 
 import com.pulse.survey.dto.request.SaveResponseRequest;
+import com.pulse.survey.dto.response.MySurveyResponseStatusDto;
 import com.pulse.survey.dto.response.SurveyResponseDto;
 import com.pulse.survey.security.UserPrincipal;
 import com.pulse.survey.service.ResponseService;
@@ -28,6 +29,12 @@ public class ResponseController {
         SurveyResponseDto res = responseService.getMyResponse(surveyId, principal.getId());
         if (res == null) return ResponseEntity.ok(null);
         return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/responses/mine")
+    public ResponseEntity<List<MySurveyResponseStatusDto>> getMyResponseStatuses(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(responseService.getMyResponseStatuses(principal.getId()));
     }
 
     @PostMapping("/surveys/{surveyId}/responses")

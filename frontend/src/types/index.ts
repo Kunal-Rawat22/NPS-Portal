@@ -70,12 +70,22 @@ export interface SurveyResponseData {
   answers: QuestionAnswer[];
 }
 
+export interface QuestionScore {
+  questionId: string;
+  questionText: string;
+  questionOrder: number;
+  averageScore: number;
+  responseCount: number;
+  totalResponses: number;
+}
+
 export interface CategoryScore {
   categoryId: string;
   categoryName: string;
   averageScore: number;
   responseCount: number;
   totalResponses: number;
+  questions: QuestionScore[];
 }
 
 export interface AnalyticsOverview {
@@ -86,6 +96,36 @@ export interface AnalyticsOverview {
   completionRate: number;
   categoryScores: CategoryScore[];
 }
+
+export interface EnrichedSurveyResponse {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  status: ResponseStatus;
+  submittedAt?: string;
+  answers: QuestionAnswer[];
+}
+
+export interface AnalyticsAnswerDetail {
+  surveyResponseId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  questionId: string;
+  questionText: string;
+  categoryId: string;
+  categoryName: string;
+  rating: number;
+  comment?: string;
+  submittedAt?: string;
+}
+
+export type AnalyticsScope =
+  | { type: 'org' }
+  | { type: 'bu'; buId: string }
+  | { type: 'hrbp-direct' }
+  | { type: 'hrbp-hierarchy' };
 
 export interface AuthState {
   user: User | null;
