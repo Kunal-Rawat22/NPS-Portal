@@ -1,11 +1,11 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { RootState } from '../../store';
 import { clearCredentials } from '../../store/authSlice';
 import { setViewMode, resetUiState } from '../../store/uiSlice';
 import { logout } from '../../api/auth';
-import { LogOut, Bell, LayoutDashboard, ClipboardList, UserCircle } from 'lucide-react';
+import { LogOut, Bell, LayoutDashboard, ClipboardList } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { user } = useSelector((s: RootState) => s.auth);
@@ -85,32 +85,32 @@ const Navbar: React.FC = () => {
         )}
 
         {user && (
-          <div className="flex items-center gap-3">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="avatar" className="w-8 h-8 rounded-full" />
-            ) : (
-              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                <span className="text-primary-700 text-sm font-bold">
-                  {user.firstName?.[0]}{user.lastName?.[0]}
-                </span>
-              </div>
-            )}
-            <div className="hidden md:block">
-              <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</p>
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-primary-50 ring-1 ring-primary-200'
+                  : 'hover:bg-gray-50'
+              }`
+            }
+            title="View profile"
+          >
+            <div className="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center shrink-0">
+              <span className="text-primary-700 text-sm font-bold">
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </span>
+            </div>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-gray-900 leading-tight">
+                {user.firstName} {user.lastName}
+              </p>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadge[user.role] || ''}`}>
                 {user.role.replace('_', ' ')}
               </span>
             </div>
-          </div>
+          </NavLink>
         )}
-
-        <Link
-          to="/profile"
-          className="text-gray-500 hover:text-primary-600 transition-colors"
-          title="View profile"
-        >
-          <UserCircle size={20} />
-        </Link>
 
         <button type="button" onClick={handleLogout} className="text-gray-500 hover:text-red-600 transition-colors" title="Log out">
           <LogOut size={20} />
