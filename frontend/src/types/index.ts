@@ -123,10 +123,10 @@ export interface AnalyticsAnswerDetail {
 
 export type AnalyticsScope =
   | { type: 'org' }
-  | { type: 'bu'; buId: string }
+  | { type: 'bu'; buId: string; competency?: string }
   | { type: 'competency'; competency: string }
-  | { type: 'hrbp-direct' }
-  | { type: 'hrbp-hierarchy' };
+  | { type: 'hrbp-direct'; competency?: string }
+  | { type: 'hrbp-hierarchy'; competency?: string };
 
 export interface AuthState {
   user: User | null;

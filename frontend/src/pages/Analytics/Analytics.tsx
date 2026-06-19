@@ -4,7 +4,6 @@ import { useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  RadarChart, PolarGrid, PolarAngleAxis, Radar,
 } from 'recharts';
 import { getSurveys } from '../../api/surveys';
 import { getBusinessUnits } from '../../api/businessUnits';
@@ -19,6 +18,7 @@ import {
 import { RootState } from '../../store';
 import { BarChart3, ChevronDown, ChevronRight, Eye, TrendingUp, Users } from 'lucide-react';
 import ResponseDetailsModal from '../../components/Analytics/ResponseDetailsModal';
+import QuestionAverageLineChart from '../../components/Analytics/QuestionAverageLineChart';
 import { AnalyticsAnswerDetail, EnrichedSurveyResponse } from '../../types';
 
 type ModalView = {
@@ -54,9 +54,13 @@ const Analytics: React.FC = () => {
     enabled: user?.role === 'ADMIN' || user?.role === 'BU_HEAD',
   });
   const { data: competencies = [] } = useQuery({
-    queryKey: ['competencies'],
-    queryFn: getCompetencies,
-    enabled: user?.role === 'ADMIN',
+    queryKey: ['competencies', user?.role, hrbpMode, selectedBU],
+    queryFn: () =>
+      getCompetencies(
+        user?.role === 'HRBP' ? hrbpMode : undefined,
+        user?.role === 'ADMIN' && selectedBU ? selectedBU : undefined
+      ),
+    enabled: user?.role === 'ADMIN' || user?.role === 'BU_HEAD' || user?.role === 'HRBP',
   });
 
   const analyticsSurveys = surveys.filter(s => s.status === 'ACTIVE' || s.status === 'CLOSED');
@@ -93,6 +97,18 @@ const Analytics: React.FC = () => {
     score: cs.averageScore,
     responses: cs.responseCount,
   })) || [];
+
+  const questionLineData = useMemo(() => {
+    if (!analytics?.categoryScores) return [];
+    const questions = analytics.categoryScores.flatMap(cs => cs.questions ?? []);
+    return questions
+      .sort((a, b) => a.questionOrder - b.questionOrder)
+      .map((q, index) => ({
+        label: `Q${index + 1}`,
+        questionText: q.questionText,
+        score: q.averageScore,
+      }));
+  }, [analytics?.categoryScores]);
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => {
@@ -178,10 +194,9 @@ const Analytics: React.FC = () => {
                 <select
                   className="input"
                   value={selectedBU}
-                  disabled={!!selectedCompetency}
                   onChange={e => {
                     setSelectedBU(e.target.value);
-                    if (e.target.value) setSelectedCompetency('');
+                    setSelectedCompetency('');
                   }}
                 >
                   <option value="">All Organisation</option>
@@ -193,11 +208,7 @@ const Analytics: React.FC = () => {
                 <select
                   className="input"
                   value={selectedCompetency}
-                  disabled={!!selectedBU}
-                  onChange={e => {
-                    setSelectedCompetency(e.target.value);
-                    if (e.target.value) setSelectedBU('');
-                  }}
+                  onChange={e => setSelectedCompetency(e.target.value)}
                 >
                   <option value="">All Competencies</option>
                   {competencies.map(c => (
@@ -208,19 +219,56 @@ const Analytics: React.FC = () => {
             </>
           )}
           {user?.role === 'BU_HEAD' && user.businessUnitName && (
-            <div>
-              <label className="label">Business Unit</label>
-              <p className="input bg-gray-50 text-gray-700">{user.businessUnitName}</p>
-            </div>
+            <>
+              <div>
+                <label className="label">Business Unit</label>
+                <p className="input bg-gray-50 text-gray-700">{user.businessUnitName}</p>
+              </div>
+              <div>
+                <label className="label">Competency</label>
+                <select
+                  className="input"
+                  value={selectedCompetency}
+                  onChange={e => setSelectedCompetency(e.target.value)}
+                >
+                  <option value="">All Competencies</option>
+                  {competencies.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
           {user?.role === 'HRBP' && (
-            <div>
-              <label className="label">View Mode</label>
-              <select className="input" value={hrbpMode} onChange={e => setHrbpMode(e.target.value as 'direct' | 'hierarchy')}>
-                <option value="direct">Direct Reports</option>
-                <option value="hierarchy">Full Hierarchy</option>
-              </select>
-            </div>
+            <>
+              <div>
+                <label className="label">View Mode</label>
+                <select
+                  className="input"
+                  value={hrbpMode}
+                  onChange={e => {
+                    setHrbpMode(e.target.value as 'direct' | 'hierarchy');
+                    setSelectedCompetency('');
+                  }}
+                >
+                  <option value="direct">Direct Reports</option>
+                  <option value="hierarchy">Full Hierarchy</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Competency</label>
+                <select
+                  className="input"
+                  value={selectedCompetency}
+                  onChange={e => setSelectedCompetency(e.target.value)}
+                >
+                  <option value="">All Competencies</option>
+                  {competencies.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -279,15 +327,13 @@ const Analytics: React.FC = () => {
             </div>
 
             <div className="card">
-              <h2 className="font-semibold text-gray-900 mb-4">Category Scores (Radar)</h2>
-              <ResponsiveContainer width="100%" height={280}>
-                <RadarChart data={chartData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <Radar name="Score" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                  <Tooltip formatter={(v: number) => [v.toFixed(2), 'Avg Score']} />
-                </RadarChart>
-              </ResponsiveContainer>
+              <h2 className="font-semibold text-gray-900 mb-2">Question Average Scores</h2>
+              <p className="text-sm text-gray-500 mb-4">All questions in one chart — hover a point for details</p>
+              {questionLineData.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-12">No question data available</p>
+              ) : (
+                <QuestionAverageLineChart data={questionLineData} />
+              )}
             </div>
           </div>
 

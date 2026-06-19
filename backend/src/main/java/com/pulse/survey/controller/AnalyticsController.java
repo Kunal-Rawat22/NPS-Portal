@@ -31,14 +31,18 @@ public class AnalyticsController {
     @PreAuthorize("hasAnyRole('ADMIN', 'BU_HEAD')")
     public ResponseEntity<AnalyticsOverviewDto> buAnalytics(@PathVariable UUID id,
                                                               @PathVariable UUID buId,
+                                                              @RequestParam(required = false) String competency,
                                                               @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getBUAnalytics(id, buId, principal));
+        return ResponseEntity.ok(analyticsService.getBUAnalytics(id, buId, principal, competency));
     }
 
     @GetMapping("/competencies")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<String>> getCompetencies() {
-        return ResponseEntity.ok(analyticsService.getCompetencies());
+    @PreAuthorize("hasAnyRole('ADMIN', 'BU_HEAD', 'HRBP')")
+    public ResponseEntity<List<String>> getCompetencies(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) String hrbpMode,
+            @RequestParam(required = false) UUID buId) {
+        return ResponseEntity.ok(analyticsService.getCompetencies(principal, hrbpMode, buId));
     }
 
     @GetMapping("/surveys/{id}/competency/{competency}")
@@ -51,15 +55,17 @@ public class AnalyticsController {
     @GetMapping("/surveys/{id}/hrbp/direct")
     @PreAuthorize("hasAnyRole('ADMIN', 'HRBP')")
     public ResponseEntity<AnalyticsOverviewDto> hrbpDirectAnalytics(@PathVariable UUID id,
+                                                                      @RequestParam(required = false) String competency,
                                                                       @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getHrbpDirectAnalytics(id, principal.getId()));
+        return ResponseEntity.ok(analyticsService.getHrbpDirectAnalytics(id, principal.getId(), competency));
     }
 
     @GetMapping("/surveys/{id}/hrbp/hierarchy")
     @PreAuthorize("hasAnyRole('ADMIN', 'HRBP')")
     public ResponseEntity<AnalyticsOverviewDto> hrbpHierarchyAnalytics(@PathVariable UUID id,
+                                                                         @RequestParam(required = false) String competency,
                                                                          @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getHrbpHierarchyAnalytics(id, principal.getId()));
+        return ResponseEntity.ok(analyticsService.getHrbpHierarchyAnalytics(id, principal.getId(), competency));
     }
 
     @GetMapping("/surveys/{id}/org/responses")
@@ -76,8 +82,9 @@ public class AnalyticsController {
                                                                          @PathVariable UUID buId,
                                                                          @RequestParam(required = false) UUID categoryId,
                                                                          @RequestParam(required = false) UUID questionId,
+                                                                         @RequestParam(required = false) String competency,
                                                                          @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getBUResponses(id, buId, principal, categoryId, questionId));
+        return ResponseEntity.ok(analyticsService.getBUResponses(id, buId, principal, categoryId, questionId, competency));
     }
 
     @GetMapping("/surveys/{id}/hrbp/direct/responses")
@@ -85,8 +92,9 @@ public class AnalyticsController {
     public ResponseEntity<List<EnrichedSurveyResponseDto>> hrbpDirectResponses(@PathVariable UUID id,
                                                                                  @RequestParam(required = false) UUID categoryId,
                                                                                  @RequestParam(required = false) UUID questionId,
+                                                                                 @RequestParam(required = false) String competency,
                                                                                  @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getHrbpDirectResponses(id, principal.getId(), categoryId, questionId));
+        return ResponseEntity.ok(analyticsService.getHrbpDirectResponses(id, principal.getId(), categoryId, questionId, competency));
     }
 
     @GetMapping("/surveys/{id}/hrbp/hierarchy/responses")
@@ -94,8 +102,9 @@ public class AnalyticsController {
     public ResponseEntity<List<EnrichedSurveyResponseDto>> hrbpHierarchyResponses(@PathVariable UUID id,
                                                                                       @RequestParam(required = false) UUID categoryId,
                                                                                       @RequestParam(required = false) UUID questionId,
+                                                                                      @RequestParam(required = false) String competency,
                                                                                       @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getHrbpHierarchyResponses(id, principal.getId(), categoryId, questionId));
+        return ResponseEntity.ok(analyticsService.getHrbpHierarchyResponses(id, principal.getId(), categoryId, questionId, competency));
     }
 
     @GetMapping("/surveys/{id}/org/answers")
@@ -112,8 +121,9 @@ public class AnalyticsController {
                                                                             @PathVariable UUID buId,
                                                                             @RequestParam(required = false) UUID categoryId,
                                                                             @RequestParam(required = false) UUID questionId,
+                                                                            @RequestParam(required = false) String competency,
                                                                             @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getBUAnswerDetails(id, buId, principal, categoryId, questionId));
+        return ResponseEntity.ok(analyticsService.getBUAnswerDetails(id, buId, principal, categoryId, questionId, competency));
     }
 
     @GetMapping("/surveys/{id}/hrbp/direct/answers")
@@ -121,8 +131,9 @@ public class AnalyticsController {
     public ResponseEntity<List<AnalyticsAnswerDetailDto>> hrbpDirectAnswerDetails(@PathVariable UUID id,
                                                                                       @RequestParam(required = false) UUID categoryId,
                                                                                       @RequestParam(required = false) UUID questionId,
+                                                                                      @RequestParam(required = false) String competency,
                                                                                       @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getHrbpDirectAnswerDetails(id, principal.getId(), categoryId, questionId));
+        return ResponseEntity.ok(analyticsService.getHrbpDirectAnswerDetails(id, principal.getId(), categoryId, questionId, competency));
     }
 
     @GetMapping("/surveys/{id}/competency/{competency}/responses")
@@ -148,7 +159,8 @@ public class AnalyticsController {
     public ResponseEntity<List<AnalyticsAnswerDetailDto>> hrbpHierarchyAnswerDetails(@PathVariable UUID id,
                                                                                        @RequestParam(required = false) UUID categoryId,
                                                                                        @RequestParam(required = false) UUID questionId,
+                                                                                       @RequestParam(required = false) String competency,
                                                                                        @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(analyticsService.getHrbpHierarchyAnswerDetails(id, principal.getId(), categoryId, questionId));
+        return ResponseEntity.ok(analyticsService.getHrbpHierarchyAnswerDetails(id, principal.getId(), categoryId, questionId, competency));
     }
 }

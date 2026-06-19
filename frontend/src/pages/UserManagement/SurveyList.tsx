@@ -18,6 +18,7 @@ const SurveyList: React.FC = () => {
   const isAdmin = user?.role === 'ADMIN';
   const isEmployee = user?.role === 'EMPLOYEE';
   const showParticipationView = isEmployee || viewMode === 'participation';
+  const isManagerView = !isEmployee && !showParticipationView;
   const [viewQuestionsSurvey, setViewQuestionsSurvey] = useState<Survey | null>(null);
   const [reopenTarget, setReopenTarget] = useState<Survey | null>(null);
 
@@ -86,17 +87,22 @@ const SurveyList: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2 ml-4">
+                {isManagerView && (s.status === 'ACTIVE' || s.status === 'CLOSED' || s.status === 'DRAFT') && (
+                  <button
+                    type="button"
+                    onClick={() => setViewQuestionsSurvey(s)}
+                    className="btn-secondary flex items-center gap-1 text-sm"
+                  >
+                    <ListOrdered size={14} /> Questions
+                  </button>
+                )}
+                {isManagerView && s.status !== 'DRAFT' && (
+                  <Link to={`/analytics?surveyId=${s.id}`} className="btn-secondary flex items-center gap-1 text-sm">
+                    <Eye size={14} /> Analytics
+                  </Link>
+                )}
                 {isAdmin && (
                   <>
-                    {(s.status === 'ACTIVE' || s.status === 'CLOSED' || s.status === 'DRAFT') && (
-                      <button
-                        type="button"
-                        onClick={() => setViewQuestionsSurvey(s)}
-                        className="btn-secondary flex items-center gap-1 text-sm"
-                      >
-                        <ListOrdered size={14} /> Questions
-                      </button>
-                    )}
                     {s.status === 'DRAFT' && (
                       <Link to={`/surveys/${s.id}/edit`} className="btn-secondary flex items-center gap-1 text-sm"><Edit size={14} /> Edit</Link>
                     )}
@@ -114,9 +120,6 @@ const SurveyList: React.FC = () => {
                     )}
                     {s.status === 'DRAFT' && (
                       <button onClick={() => { if (confirm('Delete this survey?')) deleteMutation.mutate(s.id); }} className="btn-secondary flex items-center gap-1 text-sm text-red-600"><Trash2 size={14} /> Delete</button>
-                    )}
-                    {s.status !== 'DRAFT' && (
-                      <Link to={`/analytics?surveyId=${s.id}`} className="btn-secondary flex items-center gap-1 text-sm"><Eye size={14} /> Analytics</Link>
                     )}
                   </>
                 )}

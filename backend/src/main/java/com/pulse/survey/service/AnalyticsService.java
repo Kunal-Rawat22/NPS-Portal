@@ -42,24 +42,24 @@ public class AnalyticsService {
         return buildOverview(survey, loadScopedQuestionResponses(surveyId, scope), scope);
     }
 
-    @Cacheable(value = "analytics", key = "'bu:' + #surveyId + ':' + #buId")
-    public AnalyticsOverviewDto getBUAnalytics(UUID surveyId, UUID buId, UserPrincipal principal) {
+    @Cacheable(value = "analytics", key = "'bu:' + #surveyId + ':' + #buId + ':' + (#competency != null ? #competency : 'all')")
+    public AnalyticsOverviewDto getBUAnalytics(UUID surveyId, UUID buId, UserPrincipal principal, String competency) {
         Survey survey = loadSurveyForAnalytics(surveyId);
-        UserScope scope = resolveBUScope(buId, principal);
+        UserScope scope = applyCompetencyFilter(resolveBUScope(buId, principal), competency);
         return buildOverview(survey, loadScopedQuestionResponses(surveyId, scope), scope);
     }
 
-    @Cacheable(value = "analytics", key = "'hrbp:direct:' + #surveyId + ':' + #hrbpId")
-    public AnalyticsOverviewDto getHrbpDirectAnalytics(UUID surveyId, UUID hrbpId) {
+    @Cacheable(value = "analytics", key = "'hrbp:direct:' + #surveyId + ':' + #hrbpId + ':' + (#competency != null ? #competency : 'all')")
+    public AnalyticsOverviewDto getHrbpDirectAnalytics(UUID surveyId, UUID hrbpId, String competency) {
         Survey survey = loadSurveyForAnalytics(surveyId);
-        UserScope scope = resolveHrbpDirectScope(hrbpId);
+        UserScope scope = applyCompetencyFilter(resolveHrbpDirectScope(hrbpId), competency);
         return buildOverview(survey, loadScopedQuestionResponses(surveyId, scope), scope);
     }
 
-    @Cacheable(value = "analytics", key = "'hrbp:hierarchy:' + #surveyId + ':' + #hrbpId")
-    public AnalyticsOverviewDto getHrbpHierarchyAnalytics(UUID surveyId, UUID hrbpId) {
+    @Cacheable(value = "analytics", key = "'hrbp:hierarchy:' + #surveyId + ':' + #hrbpId + ':' + (#competency != null ? #competency : 'all')")
+    public AnalyticsOverviewDto getHrbpHierarchyAnalytics(UUID surveyId, UUID hrbpId, String competency) {
         Survey survey = loadSurveyForAnalytics(surveyId);
-        UserScope scope = resolveHrbpHierarchyScope(hrbpId);
+        UserScope scope = applyCompetencyFilter(resolveHrbpHierarchyScope(hrbpId), competency);
         return buildOverview(survey, loadScopedQuestionResponses(surveyId, scope), scope);
     }
 
@@ -71,8 +71,29 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
-    public List<String> getCompetencies() {
-        return userRepository.findDistinctCompetencies();
+    public List<String> getCompetencies(UserPrincipal principal, String hrbpMode, UUID buId) {
+        return switch (principal.getRole()) {
+            case ADMIN -> buId != null
+                    ? userRepository.findDistinctCompetenciesByBusinessUnitId(buId)
+                    : userRepository.findDistinctCompetencies();
+            case BU_HEAD -> {
+                User user = userService.findUser(principal.getId());
+                if (user.getBusinessUnit() == null) {
+                    yield List.of();
+                }
+                yield userRepository.findDistinctCompetenciesByBusinessUnitId(user.getBusinessUnit().getId());
+            }
+            case HRBP -> {
+                UserScope scope = "hierarchy".equalsIgnoreCase(hrbpMode)
+                        ? resolveHrbpHierarchyScope(principal.getId())
+                        : resolveHrbpDirectScope(principal.getId());
+                if (scope.userIds().isEmpty()) {
+                    yield List.of();
+                }
+                yield userRepository.findDistinctCompetenciesByUserIds(scope.userIds());
+            }
+            default -> List.of();
+        };
     }
 
     @Transactional(readOnly = true)
@@ -100,25 +121,27 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<EnrichedSurveyResponseDto> getBUResponses(UUID surveyId, UUID buId, UserPrincipal principal,
-                                                           UUID categoryId, UUID questionId) {
+                                                           UUID categoryId, UUID questionId, String competency) {
         loadSurveyForAnalytics(surveyId);
-        UserScope scope = resolveBUScope(buId, principal);
+        UserScope scope = applyCompetencyFilter(resolveBUScope(buId, principal), competency);
         return buildEnrichedResponses(loadScopedSurveyResponses(surveyId, scope), categoryId, questionId);
     }
 
     @Transactional(readOnly = true)
     public List<EnrichedSurveyResponseDto> getHrbpDirectResponses(UUID surveyId, UUID hrbpId,
-                                                                   UUID categoryId, UUID questionId) {
+                                                                   UUID categoryId, UUID questionId,
+                                                                   String competency) {
         loadSurveyForAnalytics(surveyId);
-        UserScope scope = resolveHrbpDirectScope(hrbpId);
+        UserScope scope = applyCompetencyFilter(resolveHrbpDirectScope(hrbpId), competency);
         return buildEnrichedResponses(loadScopedSurveyResponses(surveyId, scope), categoryId, questionId);
     }
 
     @Transactional(readOnly = true)
     public List<EnrichedSurveyResponseDto> getHrbpHierarchyResponses(UUID surveyId, UUID hrbpId,
-                                                                      UUID categoryId, UUID questionId) {
+                                                                      UUID categoryId, UUID questionId,
+                                                                      String competency) {
         loadSurveyForAnalytics(surveyId);
-        UserScope scope = resolveHrbpHierarchyScope(hrbpId);
+        UserScope scope = applyCompetencyFilter(resolveHrbpHierarchyScope(hrbpId), competency);
         return buildEnrichedResponses(loadScopedSurveyResponses(surveyId, scope), categoryId, questionId);
     }
 
@@ -131,28 +154,30 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<AnalyticsAnswerDetailDto> getBUAnswerDetails(UUID surveyId, UUID buId, UserPrincipal principal,
-                                                              UUID categoryId, UUID questionId) {
+                                                              UUID categoryId, UUID questionId, String competency) {
         loadSurveyForAnalytics(surveyId);
         validateDetailFilter(categoryId, questionId);
-        UserScope scope = resolveBUScope(buId, principal);
+        UserScope scope = applyCompetencyFilter(resolveBUScope(buId, principal), competency);
         return buildAnswerDetails(loadScopedQuestionResponses(surveyId, scope), categoryId, questionId);
     }
 
     @Transactional(readOnly = true)
     public List<AnalyticsAnswerDetailDto> getHrbpDirectAnswerDetails(UUID surveyId, UUID hrbpId,
-                                                                      UUID categoryId, UUID questionId) {
+                                                                      UUID categoryId, UUID questionId,
+                                                                      String competency) {
         loadSurveyForAnalytics(surveyId);
         validateDetailFilter(categoryId, questionId);
-        UserScope scope = resolveHrbpDirectScope(hrbpId);
+        UserScope scope = applyCompetencyFilter(resolveHrbpDirectScope(hrbpId), competency);
         return buildAnswerDetails(loadScopedQuestionResponses(surveyId, scope), categoryId, questionId);
     }
 
     @Transactional(readOnly = true)
     public List<AnalyticsAnswerDetailDto> getHrbpHierarchyAnswerDetails(UUID surveyId, UUID hrbpId,
-                                                                         UUID categoryId, UUID questionId) {
+                                                                         UUID categoryId, UUID questionId,
+                                                                         String competency) {
         loadSurveyForAnalytics(surveyId);
         validateDetailFilter(categoryId, questionId);
-        UserScope scope = resolveHrbpHierarchyScope(hrbpId);
+        UserScope scope = applyCompetencyFilter(resolveHrbpHierarchyScope(hrbpId), competency);
         return buildAnswerDetails(loadScopedQuestionResponses(surveyId, scope), categoryId, questionId);
     }
 
@@ -194,6 +219,26 @@ public class AnalyticsService {
         List<User> hierarchyUsers = new ArrayList<>(userRepository.findAllInHierarchy(hrbpId));
         hierarchyUsers.addAll(userRepository.findByHrbpId(hrbpId));
         List<UUID> userIds = hierarchyUsers.stream().map(User::getId).distinct().toList();
+        return new UserScope(userIds, userIds.size());
+    }
+
+    private UserScope applyCompetencyFilter(UserScope baseScope, String competency) {
+        if (competency == null || competency.isBlank()) {
+            return baseScope;
+        }
+        return intersectScopes(baseScope, resolveCompetencyScope(competency));
+    }
+
+    private UserScope intersectScopes(UserScope baseScope, UserScope filterScope) {
+        if (baseScope.userIds() == null) {
+            return filterScope;
+        }
+        if (filterScope.userIds() == null) {
+            return baseScope;
+        }
+        Set<UUID> intersection = new HashSet<>(baseScope.userIds());
+        intersection.retainAll(filterScope.userIds());
+        List<UUID> userIds = intersection.stream().toList();
         return new UserScope(userIds, userIds.size());
     }
 

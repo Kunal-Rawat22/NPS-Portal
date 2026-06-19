@@ -45,4 +45,20 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         ORDER BY u.competency
         """)
     List<String> findDistinctCompetencies();
+
+    @Query("""
+        SELECT DISTINCT u.competency FROM User u
+        WHERE u.businessUnit.id = :buId
+          AND u.competency IS NOT NULL AND TRIM(u.competency) <> '' AND u.isActive = true
+        ORDER BY u.competency
+        """)
+    List<String> findDistinctCompetenciesByBusinessUnitId(@Param("buId") UUID buId);
+
+    @Query("""
+        SELECT DISTINCT u.competency FROM User u
+        WHERE u.id IN :userIds
+          AND u.competency IS NOT NULL AND TRIM(u.competency) <> '' AND u.isActive = true
+        ORDER BY u.competency
+        """)
+    List<String> findDistinctCompetenciesByUserIds(@Param("userIds") List<UUID> userIds);
 }
