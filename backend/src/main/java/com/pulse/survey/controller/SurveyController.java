@@ -27,7 +27,7 @@ public class SurveyController {
     @GetMapping
     public ResponseEntity<List<SurveyDto>> getAll(@AuthenticationPrincipal UserPrincipal principal) {
         if (principal.getRole().name().equals("EMPLOYEE")) {
-            return ResponseEntity.ok(surveyService.getActive());
+            return ResponseEntity.ok(surveyService.getForEmployee());
         }
         return ResponseEntity.ok(surveyService.getAll());
     }
@@ -67,6 +67,12 @@ public class SurveyController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SurveyDto> close(@PathVariable UUID id) {
         return ResponseEntity.ok(surveyService.close(id));
+    }
+
+    @PutMapping("/{id}/reopen")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SurveyDto> reopen(@PathVariable UUID id) {
+        return ResponseEntity.ok(surveyService.reopen(id));
     }
 
     @GetMapping("/{surveyId}/questions")

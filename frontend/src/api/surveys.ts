@@ -23,3 +23,4 @@ export const updateSurvey = async (id: string, data: SurveyPayload): Promise<Sur
 export const deleteSurvey = async (id: string): Promise<void> => { await api.delete(`/surveys/${id}`); };
 export const activateSurvey = async (id: string): Promise<Survey> => (await api.put(`/surveys/${id}/activate`)).data;
 export const closeSurvey = async (id: string): Promise<Survey> => (await api.put(`/surveys/${id}/close`)).data;
+export const reopenSurvey = async (id: string): Promise<Survey> => (await api.put(`/surveys/${id}/reopen`)).data;

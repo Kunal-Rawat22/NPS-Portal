@@ -33,12 +33,26 @@ public class SurveyService {
     private final CategoryRepository categoryRepository;
     private final UserService userService;
 
+    @Transactional(readOnly = true)
     public List<SurveyDto> getAll() {
-        return surveyRepository.findAllByOrderByCreatedAtDesc().stream().map(SurveyDto::from).toList();
+        return surveyRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(this::toDtoWithQuestions)
+                .toList();
     }
 
     public List<SurveyDto> getActive() {
-        return surveyRepository.findByStatus(SurveyStatus.ACTIVE).stream().map(SurveyDto::from).toList();
+        return surveyRepository.findByStatus(SurveyStatus.ACTIVE).stream()
+                .map(this::toDtoWithQuestions)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SurveyDto> getForEmployee() {
+        return surveyRepository.findByStatusInOrderByCreatedAtDesc(
+                        List.of(SurveyStatus.ACTIVE, SurveyStatus.CLOSED))
+                .stream()
+                .map(this::toDtoWithQuestions)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +115,19 @@ public class SurveyService {
     }
 
     @Transactional
+    public SurveyDto reopen(UUID id) {
+        Survey survey = findSurvey(id);
+        if (survey.getStatus() != SurveyStatus.CLOSED) {
+            throw new BadRequestException("Only CLOSED surveys can be reopened");
+        }
+        if (survey.getQuestions().isEmpty()) {
+            throw new BadRequestException("Cannot reopen survey with no questions");
+        }
+        survey.setStatus(SurveyStatus.ACTIVE);
+        return SurveyDto.from(surveyRepository.save(survey));
+    }
+
+    @Transactional
     public void delete(UUID id) {
         Survey survey = findSurvey(id);
         if (survey.getStatus() != SurveyStatus.DRAFT) {
@@ -159,6 +186,11 @@ public class SurveyService {
     public Survey findSurvey(UUID id) {
         return surveyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Survey not found: " + id));
+    }
+
+    private SurveyDto toDtoWithQuestions(Survey survey) {
+        survey.getQuestions().size();
+        return SurveyDto.from(survey);
     }
 
     private void syncQuestions(Survey survey, List<SurveyQuestionRequest> questionReqs) {

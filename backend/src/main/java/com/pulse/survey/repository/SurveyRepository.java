@@ -11,6 +11,7 @@ import java.util.UUID;
 @Repository
 public interface SurveyRepository extends JpaRepository<Survey, UUID> {
     List<Survey> findByStatus(SurveyStatus status);
+    List<Survey> findByStatusInOrderByCreatedAtDesc(List<SurveyStatus> statuses);
     List<Survey> findByCreatedById(UUID createdById);
     List<Survey> findAllByOrderByCreatedAtDesc();
 }

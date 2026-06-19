@@ -6,6 +6,7 @@ interface Props {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  confirmVariant?: 'danger' | 'primary';
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -16,10 +17,13 @@ const ConfirmDialog: React.FC<Props> = ({
   message,
   confirmLabel = 'Remove',
   cancelLabel = 'Cancel',
+  confirmVariant = 'danger',
   onConfirm,
   onCancel,
 }) => {
   if (!open) return null;
+
+  const confirmClass = confirmVariant === 'primary' ? 'btn-primary' : 'btn-danger';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -43,7 +47,7 @@ const ConfirmDialog: React.FC<Props> = ({
           <button type="button" onClick={onCancel} className="btn-secondary text-sm px-3 py-1.5">
             {cancelLabel}
           </button>
-          <button type="button" onClick={onConfirm} className="btn-danger text-sm px-3 py-1.5">
+          <button type="button" onClick={onConfirm} className={`${confirmClass} text-sm px-3 py-1.5`}>
             {confirmLabel}
           </button>
         </div>

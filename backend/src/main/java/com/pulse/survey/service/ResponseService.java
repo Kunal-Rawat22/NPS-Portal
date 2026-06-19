@@ -71,6 +71,7 @@ public class ResponseService {
     @Transactional
     public SurveyResponseDto saveDraft(UUID responseId, UUID userId, SaveResponseRequest req) {
         SurveyResponse response = findResponse(responseId, userId);
+        assertSurveyAcceptsResponses(response.getSurvey());
         if (response.getStatus() == ResponseStatus.SUBMITTED) {
             throw new BadRequestException("Cannot modify a submitted response");
         }
@@ -81,6 +82,7 @@ public class ResponseService {
     @Transactional
     public SurveyResponseDto submit(UUID responseId, UUID userId) {
         SurveyResponse response = findResponse(responseId, userId);
+        assertSurveyAcceptsResponses(response.getSurvey());
         if (response.getStatus() == ResponseStatus.SUBMITTED) {
             throw new BadRequestException("Already submitted");
         }
@@ -130,6 +132,12 @@ public class ResponseService {
                         .build();
                 response.getQuestionResponses().add(qr);
             }
+        }
+    }
+
+    private void assertSurveyAcceptsResponses(Survey survey) {
+        if (survey.getStatus() != SurveyStatus.ACTIVE) {
+            throw new BadRequestException("Survey is no longer accepting responses");
         }
     }
 
