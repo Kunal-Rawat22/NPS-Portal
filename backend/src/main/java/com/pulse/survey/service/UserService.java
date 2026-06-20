@@ -2,9 +2,14 @@ package com.pulse.survey.service;
 
 import com.pulse.survey.dto.request.CreateUserRequest;
 import com.pulse.survey.dto.request.UpdateUserRequest;
+import com.pulse.survey.dto.request.UserHierarchyImportRow;
+import com.pulse.survey.dto.request.UserImportRow;
+import com.pulse.survey.dto.response.BulkImportResult;
+import com.pulse.survey.dto.response.ImportRowError;
 import com.pulse.survey.dto.response.UserDto;
 import com.pulse.survey.entity.BusinessUnit;
 import com.pulse.survey.entity.User;
+import com.pulse.survey.enums.Role;
 import com.pulse.survey.exception.BadRequestException;
 import com.pulse.survey.exception.ResourceNotFoundException;
 import com.pulse.survey.repository.BusinessUnitRepository;
@@ -13,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -98,5 +104,144 @@ public class UserService {
     public User findUser(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+    }
+
+    @Transactional
+    public BulkImportResult importUsers(List<UserImportRow> rows) {
+        int created = 0;
+        int updated = 0;
+        int failed = 0;
+        List<ImportRowError> errors = new ArrayList<>();
+
+        for (int i = 0; i < rows.size(); i++) {
+            UserImportRow row = rows.get(i);
+            int rowNum = i + 2;
+            try {
+                String email = row.email().trim().toLowerCase();
+                String[] nameParts = splitName(row.name());
+                Role role = parseRole(row.role());
+                boolean isActive = parseStatus(row.status());
+                BusinessUnit bu = findBusinessUnitByName(row.businessUnit());
+
+                var existing = userRepository.findByEmail(email);
+                if (existing.isPresent()) {
+                    User user = existing.get();
+                    user.setFirstName(nameParts[0]);
+                    user.setLastName(nameParts[1]);
+                    user.setRole(role);
+                    user.setActive(isActive);
+                    user.setBusinessUnit(bu);
+                    userRepository.save(user);
+                    updated++;
+                } else {
+                    User user = User.builder()
+                            .email(email)
+                            .firstName(nameParts[0])
+                            .lastName(nameParts[1])
+                            .role(role)
+                            .isActive(isActive)
+                            .businessUnit(bu)
+                            .build();
+                    userRepository.save(user);
+                    created++;
+                }
+            } catch (Exception ex) {
+                failed++;
+                errors.add(new ImportRowError(rowNum, row.email(), ex.getMessage()));
+            }
+        }
+
+        return new BulkImportResult(created, updated, failed, errors);
+    }
+
+    @Transactional
+    public BulkImportResult importHierarchy(List<UserHierarchyImportRow> rows) {
+        int updated = 0;
+        int failed = 0;
+        List<ImportRowError> errors = new ArrayList<>();
+
+        for (int i = 0; i < rows.size(); i++) {
+            UserHierarchyImportRow row = rows.get(i);
+            int rowNum = i + 2;
+            try {
+                String email = row.email().trim().toLowerCase();
+                User user = userRepository.findByEmail(email)
+                        .orElseThrow(() -> new BadRequestException("User not found: " + email));
+
+                boolean changed = false;
+
+                if (row.hrbpEmail() != null && !row.hrbpEmail().isBlank()) {
+                    String hrbpEmail = row.hrbpEmail().trim().toLowerCase();
+                    User hrbp = userRepository.findByEmail(hrbpEmail)
+                            .orElseThrow(() -> new BadRequestException("HRBP not found: " + hrbpEmail));
+                    user.setHrbp(hrbp);
+                    changed = true;
+                }
+
+                if (row.rmEmail() != null && !row.rmEmail().isBlank()) {
+                    String rmEmail = row.rmEmail().trim().toLowerCase();
+                    User rm = userRepository.findByEmail(rmEmail)
+                            .orElseThrow(() -> new BadRequestException("Reporting manager not found: " + rmEmail));
+                    user.setReportingTo(rm);
+                    changed = true;
+                }
+
+                if (!changed) {
+                    throw new BadRequestException("At least one of HRBP Email or RM Email must be provided");
+                }
+
+                userRepository.save(user);
+                updated++;
+            } catch (Exception ex) {
+                failed++;
+                errors.add(new ImportRowError(rowNum, row.email(), ex.getMessage()));
+            }
+        }
+
+        return new BulkImportResult(0, updated, failed, errors);
+    }
+
+    private String[] splitName(String name) {
+        String trimmed = name.trim();
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("Name is required");
+        }
+        int spaceIdx = trimmed.indexOf(' ');
+        if (spaceIdx < 0) {
+            return new String[]{trimmed, "-"};
+        }
+        return new String[]{trimmed.substring(0, spaceIdx), trimmed.substring(spaceIdx + 1).trim()};
+    }
+
+    private Role parseRole(String roleStr) {
+        try {
+            return Role.valueOf(roleStr.trim().toUpperCase().replace(' ', '_'));
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid role: " + roleStr);
+        }
+    }
+
+    private boolean parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return true;
+        }
+        String normalized = status.trim().toLowerCase();
+        return switch (normalized) {
+            case "active", "yes", "true", "1" -> true;
+            case "inactive", "no", "false", "0" -> false;
+            default -> throw new BadRequestException("Invalid status: " + status);
+        };
+    }
+
+    private BusinessUnit findBusinessUnitByName(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        String trimmed = name.trim();
+        return buRepository.findByName(trimmed)
+                .or(() -> buRepository.findAll().stream()
+                        .filter(bu -> bu.getName().equalsIgnoreCase(trimmed))
+                        .findFirst())
+                .orElseThrow(() -> new BadRequestException("Business unit not found: " + name));
     }
 }

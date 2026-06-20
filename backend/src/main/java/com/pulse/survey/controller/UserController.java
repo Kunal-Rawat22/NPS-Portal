@@ -1,7 +1,10 @@
 package com.pulse.survey.controller;
 
+import com.pulse.survey.dto.request.BulkUserHierarchyImportRequest;
+import com.pulse.survey.dto.request.BulkUserImportRequest;
 import com.pulse.survey.dto.request.CreateUserRequest;
 import com.pulse.survey.dto.request.UpdateUserRequest;
+import com.pulse.survey.dto.response.BulkImportResult;
 import com.pulse.survey.dto.response.UserDto;
 import com.pulse.survey.security.UserPrincipal;
 import com.pulse.survey.service.UserService;
@@ -69,5 +72,17 @@ public class UserController {
     @PreAuthorize("hasAnyRole('ADMIN', 'HRBP')")
     public ResponseEntity<List<UserDto>> getDirectReports(@PathVariable UUID hrbpId) {
         return ResponseEntity.ok(userService.getDirectHrbpReports(hrbpId));
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BulkImportResult> importUsers(@Valid @RequestBody BulkUserImportRequest req) {
+        return ResponseEntity.ok(userService.importUsers(req.rows()));
+    }
+
+    @PostMapping("/import-hierarchy")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BulkImportResult> importHierarchy(@Valid @RequestBody BulkUserHierarchyImportRequest req) {
+        return ResponseEntity.ok(userService.importHierarchy(req.rows()));
     }
 }

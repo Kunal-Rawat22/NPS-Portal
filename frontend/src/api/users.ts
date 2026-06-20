@@ -19,3 +19,36 @@ export const updateUser = async (id: string, data: Partial<CreateUserPayload> & 
 export const deactivateUser = async (id: string): Promise<void> => { await api.delete(`/users/${id}`); };
 export const getUserHierarchy = async (id: string): Promise<User[]> => (await api.get(`/users/${id}/hierarchy`)).data;
 export const getHrbpDirectReports = async (hrbpId: string): Promise<User[]> => (await api.get(`/users/hrbp/${hrbpId}/direct`)).data;
+
+export interface ImportRowError {
+  row: number;
+  email: string;
+  message: string;
+}
+
+export interface BulkImportResult {
+  created: number;
+  updated: number;
+  failed: number;
+  errors: ImportRowError[];
+}
+
+export interface UserImportRowPayload {
+  name: string;
+  email: string;
+  role: string;
+  businessUnit?: string;
+  status?: string;
+}
+
+export interface HierarchyImportRowPayload {
+  email: string;
+  hrbpEmail?: string;
+  rmEmail?: string;
+}
+
+export const importUsers = async (rows: UserImportRowPayload[]): Promise<BulkImportResult> =>
+  (await api.post('/users/import', { rows })).data;
+
+export const importUserHierarchy = async (rows: HierarchyImportRowPayload[]): Promise<BulkImportResult> =>
+  (await api.post('/users/import-hierarchy', { rows })).data;

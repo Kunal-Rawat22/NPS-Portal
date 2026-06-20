@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, createUser, deactivateUser, CreateUserPayload } from '../../api/users';
+import { getUsers, createUser, deactivateUser, importUsers, importUserHierarchy, CreateUserPayload } from '../../api/users';
 import { getBusinessUnits } from '../../api/businessUnits';
-import { Plus, UserX, Search } from 'lucide-react';
+import { Plus, UserX, Search, Upload, Users } from 'lucide-react';
 import { Role } from '../../types';
+import UserImportModal from '../../components/UserManagement/UserImportModal';
+import {
+  parseUserImportFile,
+  parseHierarchyImportFile,
+  USER_IMPORT_TEMPLATE,
+  HIERARCHY_IMPORT_TEMPLATE,
+} from '../../utils/spreadsheetParser';
 
 const ROLES: Role[] = ['ADMIN', 'BU_HEAD', 'HRBP', 'EMPLOYEE'];
+
+type ImportModalMode = 'users' | 'hierarchy' | null;
 
 const UserManagement: React.FC = () => {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [importModal, setImportModal] = useState<ImportModalMode>(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<CreateUserPayload>({ email: '', firstName: '', lastName: '', role: 'EMPLOYEE' });
   const [error, setError] = useState('');
@@ -44,9 +54,17 @@ const UserManagement: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-500 mt-1">{users.filter(u => u.isActive).length} active users</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-          <Plus size={18} /> Add User
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setImportModal('users')} className="btn-secondary flex items-center gap-2">
+            <Upload size={18} /> Import Users
+          </button>
+          <button onClick={() => setImportModal('hierarchy')} className="btn-secondary flex items-center gap-2">
+            <Users size={18} /> Map HRBP & RM
+          </button>
+          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+            <Plus size={18} /> Add User
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -133,6 +151,42 @@ const UserManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      <UserImportModal
+        open={importModal === 'users'}
+        mode="users"
+        title="Import Users"
+        description="Upload a CSV or Excel file with user details. Existing users are updated by email."
+        template={USER_IMPORT_TEMPLATE}
+        columns={['Name', 'Email', 'Role', 'Business Unit', 'Status']}
+        onClose={() => setImportModal(null)}
+        onParse={parseUserImportFile}
+        onImport={(rows) => importUsers(rows.map(r => ({
+          name: r.name,
+          email: r.email,
+          role: r.role,
+          businessUnit: r.businessUnit || undefined,
+          status: r.status || undefined,
+        })))}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['users'] })}
+      />
+
+      <UserImportModal
+        open={importModal === 'hierarchy'}
+        mode="hierarchy"
+        title="Map HRBP & Reporting Manager"
+        description="Upload a CSV or Excel file to link users with their HRBP and RM using email addresses."
+        template={HIERARCHY_IMPORT_TEMPLATE}
+        columns={['Email', 'HRBP Email', 'RM Email']}
+        onClose={() => setImportModal(null)}
+        onParse={parseHierarchyImportFile}
+        onImport={(rows) => importUserHierarchy(rows.map(r => ({
+          email: r.email,
+          hrbpEmail: r.hrbpEmail || undefined,
+          rmEmail: r.rmEmail || undefined,
+        })))}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['users'] })}
+      />
     </div>
   );
 };
