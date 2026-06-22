@@ -81,6 +81,8 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private void seedUsers(Map<String, BusinessUnit> businessUnits) {
+        seedGoogleAdmin("rishabh.mehrotra@tothenew.com", "Rishabh", "Mehrotra");
+
         List<UserSeed> seeds = List.of(
                 // BU Heads
                 new UserSeed("eng.buhead@yourcompany.com", "Alex", "Engineering", Role.BU_HEAD,
@@ -152,6 +154,20 @@ public class DemoDataSeeder implements ApplicationRunner {
             userRepository.save(user);
             log.info("Seeded user: {} ({})", seed.email(), seed.role());
         }
+    }
+
+    private void seedGoogleAdmin(String email, String firstName, String lastName) {
+        if (userRepository.existsByEmail(email)) {
+            return;
+        }
+        userRepository.save(User.builder()
+                .email(email)
+                .firstName(firstName)
+                .lastName(lastName)
+                .role(Role.ADMIN)
+                .isActive(true)
+                .build());
+        log.info("Seeded Google SSO admin: {}", email);
     }
 
     private void assignBusinessUnitHeads(Map<String, BusinessUnit> businessUnits) {

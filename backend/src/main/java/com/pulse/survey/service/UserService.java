@@ -14,6 +14,7 @@ import com.pulse.survey.exception.BadRequestException;
 import com.pulse.survey.exception.ResourceNotFoundException;
 import com.pulse.survey.repository.BusinessUnitRepository;
 import com.pulse.survey.repository.UserRepository;
+import com.pulse.survey.util.AllowedDomainValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final BusinessUnitRepository buRepository;
+    private final AllowedDomainValidator domainValidator;
 
     public List<UserDto> getAllUsers() {
         return userRepository.findAll().stream().map(UserDto::from).toList();
@@ -39,12 +41,15 @@ public class UserService {
 
     @Transactional
     public UserDto createUser(CreateUserRequest req) {
-        if (userRepository.existsByEmail(req.email())) {
-            throw new BadRequestException("Email already exists: " + req.email());
+        String email = domainValidator.normalizeEmail(req.email());
+        domainValidator.validateEmail(email);
+
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("Email already exists: " + email);
         }
 
         User.UserBuilder builder = User.builder()
-                .email(req.email())
+                .email(email)
                 .firstName(req.firstName())
                 .lastName(req.lastName())
                 .role(req.role())
@@ -117,7 +122,8 @@ public class UserService {
             UserImportRow row = rows.get(i);
             int rowNum = i + 2;
             try {
-                String email = row.email().trim().toLowerCase();
+                String email = domainValidator.normalizeEmail(row.email());
+                domainValidator.validateEmail(email);
                 String[] nameParts = splitName(row.name());
                 Role role = parseRole(row.role());
                 boolean isActive = parseStatus(row.status());
@@ -164,7 +170,8 @@ public class UserService {
             UserHierarchyImportRow row = rows.get(i);
             int rowNum = i + 2;
             try {
-                String email = row.email().trim().toLowerCase();
+                String email = domainValidator.normalizeEmail(row.email());
+                domainValidator.validateEmail(email);
                 User user = userRepository.findByEmail(email)
                         .orElseThrow(() -> new BadRequestException("User not found: " + email));
 

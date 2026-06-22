@@ -209,7 +209,7 @@ npm run dev
 | Variable | Description | Example |
 |---|---|---|
 | `GOOGLE_CLIENT_ID` | OAuth 2.0 Client ID from Google Cloud Console | `123456.apps.googleusercontent.com` |
-| `GOOGLE_ALLOWED_DOMAIN` | Only users from this domain can log in | `yourcompany.com` |
+| `GOOGLE_ALLOWED_DOMAIN` | Only users from this domain can log in | `tothenew.com` |
 | `JWT_SECRET` | Secret key for signing internal tokens (min 32 chars) | `a-long-random-secret-string` |
 
 ---

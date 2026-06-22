@@ -35,7 +35,7 @@ jwt:
 
 google:
   client-id: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
-  allowed-domain: ${GOOGLE_ALLOWED_DOMAIN:yourcompany.com}
+  allowed-domain: ${GOOGLE_ALLOWED_DOMAIN:tothenew.com}
 
 logging:
   level:

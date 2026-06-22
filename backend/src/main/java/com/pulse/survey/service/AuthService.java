@@ -10,6 +10,7 @@ import com.pulse.survey.entity.User;
 import com.pulse.survey.exception.ForbiddenException;
 import com.pulse.survey.exception.ResourceNotFoundException;
 import com.pulse.survey.repository.UserRepository;
+import com.pulse.survey.util.AllowedDomainValidator;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,12 +29,13 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AllowedDomainValidator domainValidator;
 
     @Transactional
     public AuthTokenResponse googleLogin(GoogleAuthRequest request) {
         GoogleIdToken.Payload payload = googleVerifier.verify(request.idToken());
 
-        String email = payload.getEmail();
+        String email = domainValidator.normalizeEmail(payload.getEmail());
         String googleSub = payload.getSubject();
         String name = (String) payload.get("name");
         String picture = (String) payload.get("picture");

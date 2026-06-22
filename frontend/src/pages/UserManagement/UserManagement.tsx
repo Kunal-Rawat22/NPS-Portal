@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, createUser, deactivateUser, importUsers, importUserHierarchy, CreateUserPayload } from '../../api/users';
+import { getUsers, createUser, updateUser, deactivateUser, importUsers, importUserHierarchy, CreateUserPayload } from '../../api/users';
 import { getBusinessUnits } from '../../api/businessUnits';
 import { Plus, UserX, Search, Upload, Users } from 'lucide-react';
 import { Role } from '../../types';
@@ -13,6 +13,9 @@ import {
 } from '../../utils/spreadsheetParser';
 
 const ROLES: Role[] = ['ADMIN', 'BU_HEAD', 'HRBP', 'EMPLOYEE'];
+const ALLOWED_DOMAIN = import.meta.env.VITE_ALLOWED_DOMAIN || 'tothenew.com';
+
+const isAllowedEmail = (email: string) => email.trim().toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
 
 type ImportModalMode = 'users' | 'hierarchy' | null;
 
@@ -38,21 +41,31 @@ const UserManagement: React.FC = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: Role }) => updateUser(id, { role }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    onError: (e: any) => setError(e.response?.data?.message || 'Failed to update role'),
+  });
+
+  const handleCreateUser = () => {
+    setError('');
+    if (!isAllowedEmail(form.email)) {
+      setError(`Only @${ALLOWED_DOMAIN} email addresses are allowed.`);
+      return;
+    }
+    createMutation.mutate(form);
+  };
+
   const filtered = users.filter(u =>
     `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
   );
-
-  const roleBadge: Record<string, string> = {
-    ADMIN: 'bg-red-100 text-red-700', BU_HEAD: 'bg-blue-100 text-blue-700',
-    HRBP: 'bg-purple-100 text-purple-700', EMPLOYEE: 'bg-green-100 text-green-700',
-  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-500 mt-1">{users.filter(u => u.isActive).length} active users</p>
+          <p className="text-gray-500 mt-1">{users.filter(u => u.isActive).length} active users · @{ALLOWED_DOMAIN} only</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setImportModal('users')} className="btn-secondary flex items-center gap-2">
@@ -72,7 +85,7 @@ const UserManagement: React.FC = () => {
           <h2 className="font-semibold text-gray-900">Add New User</h2>
           {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">{error}</div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="label">Email *</label><input className="input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
+            <div><label className="label">Email *</label><input className="input" type="email" placeholder={`name@${ALLOWED_DOMAIN}`} value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
             <div><label className="label">First Name *</label><input className="input" value={form.firstName} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} /></div>
             <div><label className="label">Last Name *</label><input className="input" value={form.lastName} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} /></div>
             <div><label className="label">Role *</label>
@@ -89,7 +102,7 @@ const UserManagement: React.FC = () => {
             <div><label className="label">Competency</label><input className="input" placeholder="e.g. Java, JavaScript" value={form.competency || ''} onChange={e => setForm(p => ({ ...p, competency: e.target.value }))} /></div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => createMutation.mutate(form)} className="btn-primary" disabled={createMutation.isPending}>
+            <button onClick={handleCreateUser} className="btn-primary" disabled={createMutation.isPending}>
               {createMutation.isPending ? 'Creating...' : 'Create User'}
             </button>
             <button onClick={() => { setShowForm(false); setError(''); }} className="btn-secondary">Cancel</button>
@@ -130,7 +143,16 @@ const UserManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3 text-gray-600">{u.email}</td>
-                    <td className="py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadge[u.role]}`}>{u.role.replace('_', ' ')}</span></td>
+                    <td className="py-3">
+                      <select
+                        className="text-xs px-2 py-1 rounded-full font-medium border-0 cursor-pointer focus:ring-2 focus:ring-primary-300"
+                        value={u.role}
+                        disabled={updateRoleMutation.isPending}
+                        onChange={e => updateRoleMutation.mutate({ id: u.id, role: e.target.value as Role })}
+                      >
+                        {ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
+                      </select>
+                    </td>
                     <td className="py-3 text-gray-600">{u.businessUnitName || '—'}</td>
                     <td className="py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
