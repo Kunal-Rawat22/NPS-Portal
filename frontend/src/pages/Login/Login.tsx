@@ -26,14 +26,13 @@ const Login: React.FC = () => {
     if (isAuthenticated) navigate('/dashboard');
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlError = params.get('error');
-    if (urlError) {
-      setError(decodeURIComponent(urlError));
-      window.history.replaceState({}, '', '/login');
+  const getApiErrorMessage = (err: unknown, fallback: string): string => {
+    if (typeof err === 'object' && err !== null && 'response' in err) {
+      const data = (err as { response?: { data?: { message?: string } } }).response?.data;
+      if (data?.message) return data.message;
     }
-  }, []);
+    return fallback;
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +47,7 @@ const Login: React.FC = () => {
       }
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password. Please try again.');
+      setError(getApiErrorMessage(err, 'Invalid email or password. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -57,6 +56,7 @@ const Login: React.FC = () => {
   const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     if (!credentialResponse.credential) return;
     setError('');
+    setLoading(true);
     try {
       const data = await googleLogin(credentialResponse.credential);
       dispatch(setCredentials({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user }));
@@ -64,8 +64,20 @@ const Login: React.FC = () => {
         dispatch(setViewMode('participation'));
       }
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Google login failed. Ensure your account is provisioned.');
+    } catch (err: unknown) {
+      const status = typeof err === 'object' && err !== null && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
+        : undefined;
+
+      if (status === 403) {
+        setError(getApiErrorMessage(err, 'This app is only available to organisation accounts.'));
+      } else if (status === 401) {
+        setError(getApiErrorMessage(err, 'Google sign-in failed. Please try again.'));
+      } else {
+        setError(getApiErrorMessage(err, 'Google sign-in failed. Please try again.'));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -180,22 +192,11 @@ const Login: React.FC = () => {
                 width="320"
               />
             </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-gray-400">or</span>
-              </div>
-            </div>
-            <a
-              href="/login/auth/google"
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2.5 text-center"
-            >
-              Continue with Google (Redirect)
-            </a>
+            {loading && (
+              <p className="text-center text-sm text-gray-500">Verifying your account...</p>
+            )}
             <p className="text-center text-xs text-gray-400">
-              Only organisation accounts are permitted. Contact HR if you cannot log in.
+              Only organisation Google accounts are permitted. Personal Gmail accounts cannot sign in.
             </p>
           </div>
         )}

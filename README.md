@@ -59,14 +59,15 @@ A regular team member who takes the survey.
 
 ## How Does Login Work?
 
-This portal uses **Google Sign-In** exclusively. There is no username/password to remember.
+This portal uses **Google Sign-In** for employees. Administrators can also sign in with email and password.
 
 1. Visit the portal link
 2. Click **"Sign in with Google"**
 3. Choose your company Google account
-4. You are automatically taken to the right section based on your role
+4. On first sign-in, your account is created automatically with the Employee role
+5. You are taken to the right section based on your role
 
-> **Important:** Only employees whose accounts have been set up in the system by an Administrator can access the portal — even if you have a valid company Google account.
+> **Important:** Only users with a Google account from your organisation's domain (e.g. `@yourcompany.com`) can sign in. Personal Gmail accounts are rejected.
 
 ---
 
@@ -169,7 +170,13 @@ This gives a complete picture of how her entire part of the organisation respond
 
 ### Prerequisites
 - Docker & Docker Compose
-- A Google Cloud project with OAuth 2.0 credentials
+- A Google Cloud project with OAuth 2.0 **Web application** credentials
+
+### Google Cloud Console setup
+
+1. Create an OAuth 2.0 **Web application** client ID
+2. Add **Authorized JavaScript origins**: `http://localhost:3000` (dev) and your production frontend URL
+3. No redirect URI is required for the ID-token sign-in flow used by this app
 
 ### Setup
 
@@ -222,7 +229,7 @@ npm run dev
 | Backend | Spring Boot 3.2, Java 17, Gradle |
 | Database | PostgreSQL 15 |
 | Cache | Redis 7 |
-| Auth | Google OAuth 2.0 SSO + Internal JWT |
+| Auth | Google ID token verification (SPA) + Internal JWT |
 | Infrastructure | Docker, Docker Compose, Flyway (DB migrations) |
 
 ---

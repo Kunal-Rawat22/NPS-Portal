@@ -36,6 +36,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponseFactory.failure(ex.getMessage()));
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ResponseDTO> handleUnauthorized(UnauthorizedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponseFactory.failure(ex.getMessage()));
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, BadRequestException.class})
     public ResponseEntity<ResponseDTO> handleBadRequest(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

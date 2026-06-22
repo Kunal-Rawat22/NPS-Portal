@@ -7,6 +7,7 @@ import com.pulse.survey.dto.request.RefreshTokenRequest;
 import com.pulse.survey.dto.response.AuthTokenResponse;
 import com.pulse.survey.dto.response.UserDto;
 import com.pulse.survey.entity.User;
+import com.pulse.survey.enums.Role;
 import com.pulse.survey.exception.ForbiddenException;
 import com.pulse.survey.exception.ResourceNotFoundException;
 import com.pulse.survey.repository.UserRepository;
@@ -39,21 +40,12 @@ public class AuthService {
         String picture = (String) payload.get("picture");
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ForbiddenException(
-                        "Account not found. Please ask your administrator to provision your account before logging in."));
+                .map(existing -> updateExistingGoogleUser(existing, googleSub, name, picture))
+                .orElseGet(() -> createGoogleUser(email, googleSub, name, picture));
 
         if (!user.isActive()) {
             throw new ForbiddenException("Your account is deactivated. Please contact HR.");
         }
-
-        user.setGoogleSub(googleSub);
-        if (picture != null) user.setAvatarUrl(picture);
-        if (name != null && user.getFirstName() == null) {
-            String[] parts = name.split(" ", 2);
-            user.setFirstName(parts[0]);
-            if (parts.length > 1) user.setLastName(parts[1]);
-        }
-        userRepository.save(user);
 
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
         String refreshToken = jwtService.generateRefreshToken(user.getId());
@@ -61,6 +53,52 @@ public class AuthService {
 
         log.info("User {} logged in via Google SSO with role {}", email, user.getRole());
         return new AuthTokenResponse(accessToken, refreshToken, UserDto.from(user));
+    }
+
+    private User updateExistingGoogleUser(User user, String googleSub, String name, String picture) {
+        user.setGoogleSub(googleSub);
+        if (picture != null) {
+            user.setAvatarUrl(picture);
+        }
+        if (name != null) {
+            applyNameIfBlank(user, name);
+        }
+        return userRepository.save(user);
+    }
+
+    private User createGoogleUser(String email, String googleSub, String name, String picture) {
+        User user = User.builder()
+                .email(email)
+                .googleSub(googleSub)
+                .avatarUrl(picture)
+                .role(Role.EMPLOYEE)
+                .isActive(true)
+                .build();
+
+        if (name != null) {
+            applyNameIfBlank(user, name);
+        } else {
+            String localPart = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+            user.setFirstName(localPart);
+            user.setLastName("User");
+        }
+
+        User saved = userRepository.save(user);
+        log.info("Auto-provisioned new Google user {} with role {}", email, Role.EMPLOYEE);
+        return saved;
+    }
+
+    private void applyNameIfBlank(User user, String name) {
+        if (user.getFirstName() != null && user.getLastName() != null) {
+            return;
+        }
+        String[] parts = name.split(" ", 2);
+        if (user.getFirstName() == null) {
+            user.setFirstName(parts[0]);
+        }
+        if (user.getLastName() == null) {
+            user.setLastName(parts.length > 1 ? parts[1] : "User");
+        }
     }
 
     public AuthTokenResponse refreshToken(RefreshTokenRequest request) {

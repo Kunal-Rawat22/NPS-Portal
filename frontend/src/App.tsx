@@ -7,7 +7,6 @@ import { store } from './store';
 import ProtectedRoute from './routes/ProtectedRoute';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Login/Login';
-import GoogleOAuthCallback from './pages/Auth/GoogleOAuthCallback';
 import AdminDashboard from './pages/Dashboard/AdminDashboard';
 import BUDashboard from './pages/Dashboard/BUDashboard';
 import HRBPDashboard from './pages/Dashboard/HRBPDashboard';
@@ -50,7 +49,6 @@ function App() {
             <SessionExpiredModal />
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
                   <Route path="/dashboard" element={<DashboardRouter />} />
