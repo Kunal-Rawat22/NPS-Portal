@@ -26,6 +26,15 @@ const Login: React.FC = () => {
     if (isAuthenticated) navigate('/dashboard');
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlError = params.get('error');
+    if (urlError) {
+      setError(decodeURIComponent(urlError));
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -171,6 +180,20 @@ const Login: React.FC = () => {
                 width="320"
               />
             </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-gray-400">or</span>
+              </div>
+            </div>
+            <a
+              href="/login/auth/google"
+              className="btn-primary w-full flex items-center justify-center gap-2 py-2.5 text-center"
+            >
+              Continue with Google (Redirect)
+            </a>
             <p className="text-center text-xs text-gray-400">
               Only organisation accounts are permitted. Contact HR if you cannot log in.
             </p>
